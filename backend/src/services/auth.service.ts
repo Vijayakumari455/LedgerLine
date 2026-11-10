@@ -2,6 +2,7 @@ import { Role, UserStatus, AccountStatus } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { hashPassword, verifyPassword, generateRandomToken, hashToken } from '../utils/crypto.js';
 import { AuditService } from './audit.service.js';
+import { AppError } from '../utils/errors.js';
 
 export interface RegisterDTO {
   email: string;
@@ -32,10 +33,7 @@ export class AuthService {
     });
 
     if (existing) {
-      const error = new Error('Email address is already registered');
-      (error as Record<string, unknown>).statusCode = 409;
-      (error as Record<string, unknown>).code = 'EMAIL_ALREADY_EXISTS';
-      throw error;
+      throw new AppError('Email address is already registered', 409, 'EMAIL_ALREADY_EXISTS');
     }
 
     const passwordHash = await hashPassword(dto.password);
@@ -111,26 +109,17 @@ export class AuthService {
     if (!user) {
       // Perform a dummy verification to prevent email timing attacks
       await hashPassword('dummy_timing_protection_password');
-      const error = new Error('Invalid email or password');
-      (error as Record<string, unknown>).statusCode = 401;
-      (error as Record<string, unknown>).code = 'INVALID_CREDENTIALS';
-      throw error;
+      throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
     }
 
     const isPasswordValid = await verifyPassword(user.passwordHash, dto.password);
 
     if (!isPasswordValid) {
-      const error = new Error('Invalid email or password');
-      (error as Record<string, unknown>).statusCode = 401;
-      (error as Record<string, unknown>).code = 'INVALID_CREDENTIALS';
-      throw error;
+      throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
     }
 
     if (user.status === UserStatus.SUSPENDED) {
-      const error = new Error('Your account has been suspended. Please contact customer support.');
-      (error as Record<string, unknown>).statusCode = 403;
-      (error as Record<string, unknown>).code = 'ACCOUNT_SUSPENDED';
-      throw error;
+      throw new AppError('Your account has been suspended. Please contact customer support.', 403, 'ACCOUNT_SUSPENDED');
     }
 
     // Generate secure session token (32 bytes = 64 hex characters)
@@ -224,9 +213,7 @@ export class AuthService {
     });
 
     if (!user) {
-      const error = new Error('User not found');
-      (error as Record<string, unknown>).statusCode = 404;
-      throw error;
+      throw new AppError('User not found', 404);
     }
 
     return {

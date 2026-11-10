@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Prisma, TransactionType, TransactionStatus, EntryType, AccountStatus, UserStatus } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { AuditService } from './audit.service.js';
+import { AppError } from '../utils/errors.js';
 
 export const SYSTEM_SETTLEMENT_ACCOUNT_NUMBER = 'SYSTEM-SETTLEMENT-CLEARING-000000';
 export const MAX_TRANSACTION_AMOUNT = BigInt(100000000000); // 1 Billion INR (100 Billion Paise)
@@ -79,15 +80,11 @@ export class LedgerService {
    */
   static async deposit(params: DepositParams) {
     if (params.amount <= BigInt(0)) {
-      const error = new Error('Deposit amount must be a positive integer greater than zero');
-      (error as Record<string, unknown>).statusCode = 400;
-      throw error;
+      throw new AppError('Deposit amount must be a positive integer greater than zero', 400);
     }
 
     if (params.amount > MAX_TRANSACTION_AMOUNT) {
-      const error = new Error('Deposit amount exceeds the maximum allowable single transaction limit');
-      (error as Record<string, unknown>).statusCode = 400;
-      throw error;
+      throw new AppError('Deposit amount exceeds the maximum allowable single transaction limit', 400);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -98,27 +95,19 @@ export class LedgerService {
       });
 
       if (!account) {
-        const error = new Error('Account not found');
-        (error as Record<string, unknown>).statusCode = 404;
-        throw error;
+        throw new AppError('Account not found', 404);
       }
 
       if (account.status === AccountStatus.FROZEN) {
-        const error = new Error('Account is frozen. Financial transactions are blocked.');
-        (error as Record<string, unknown>).statusCode = 403;
-        throw error;
+        throw new AppError('Account is frozen. Financial transactions are blocked.', 403);
       }
 
       if (account.status === AccountStatus.CLOSED) {
-        const error = new Error('Account is closed. Financial transactions are blocked.');
-        (error as Record<string, unknown>).statusCode = 400;
-        throw error;
+        throw new AppError('Account is closed. Financial transactions are blocked.', 400);
       }
 
       if (account.user.status !== UserStatus.ACTIVE) {
-        const error = new Error('Account holder is not active. Onboarding approval required before executing transactions.');
-        (error as Record<string, unknown>).statusCode = 403;
-        throw error;
+        throw new AppError('Account holder is not active. Onboarding approval required before executing transactions.', 403);
       }
 
       // 2. Obtain System Settlement Account
@@ -235,15 +224,11 @@ export class LedgerService {
    */
   static async withdraw(params: WithdrawParams) {
     if (params.amount <= BigInt(0)) {
-      const error = new Error('Withdrawal amount must be a positive integer greater than zero');
-      (error as Record<string, unknown>).statusCode = 400;
-      throw error;
+      throw new AppError('Withdrawal amount must be a positive integer greater than zero', 400);
     }
 
     if (params.amount > MAX_TRANSACTION_AMOUNT) {
-      const error = new Error('Withdrawal amount exceeds the maximum allowable single transaction limit');
-      (error as Record<string, unknown>).statusCode = 400;
-      throw error;
+      throw new AppError('Withdrawal amount exceeds the maximum allowable single transaction limit', 400);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -254,27 +239,19 @@ export class LedgerService {
       });
 
       if (!account) {
-        const error = new Error('Account not found');
-        (error as Record<string, unknown>).statusCode = 404;
-        throw error;
+        throw new AppError('Account not found', 404);
       }
 
       if (account.status === AccountStatus.FROZEN) {
-        const error = new Error('Account is frozen. Financial transactions are blocked.');
-        (error as Record<string, unknown>).statusCode = 403;
-        throw error;
+        throw new AppError('Account is frozen. Financial transactions are blocked.', 403);
       }
 
       if (account.status === AccountStatus.CLOSED) {
-        const error = new Error('Account is closed. Financial transactions are blocked.');
-        (error as Record<string, unknown>).statusCode = 400;
-        throw error;
+        throw new AppError('Account is closed. Financial transactions are blocked.', 400);
       }
 
       if (account.user.status !== UserStatus.ACTIVE) {
-        const error = new Error('Account holder is not active. Onboarding approval required before executing transactions.');
-        (error as Record<string, unknown>).statusCode = 403;
-        throw error;
+        throw new AppError('Account holder is not active. Onboarding approval required before executing transactions.', 403);
       }
 
       // 2. Obtain System Settlement Account
@@ -291,12 +268,11 @@ export class LedgerService {
 
       // 4. Balance Verification (Non-Negative Invariant)
       if (account.balance < params.amount) {
-        const error = new Error(
-          `Insufficient account balance. Available: ${account.balance.toString()} minor units, Requested: ${params.amount.toString()}`
+        throw new AppError(
+          `Insufficient account balance. Available: ${account.balance.toString()} minor units, Requested: ${params.amount.toString()}`,
+          400,
+          'INSUFFICIENT_FUNDS'
         );
-        (error as Record<string, unknown>).statusCode = 400;
-        (error as Record<string, unknown>).code = 'INSUFFICIENT_FUNDS';
-        throw error;
       }
 
       // 5. Update balances
@@ -407,15 +383,11 @@ export class LedgerService {
    */
   static async transfer(params: TransferParams) {
     if (params.amount <= BigInt(0)) {
-      const error = new Error('Transfer amount must be a positive integer greater than zero');
-      (error as Record<string, unknown>).statusCode = 400;
-      throw error;
+      throw new AppError('Transfer amount must be a positive integer greater than zero', 400);
     }
 
     if (params.amount > MAX_TRANSACTION_AMOUNT) {
-      const error = new Error('Transfer amount exceeds the maximum allowable single transaction limit');
-      (error as Record<string, unknown>).statusCode = 400;
-      throw error;
+      throw new AppError('Transfer amount exceeds the maximum allowable single transaction limit', 400);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -426,27 +398,19 @@ export class LedgerService {
       });
 
       if (!sourceAccount) {
-        const error = new Error('Source account not found');
-        (error as Record<string, unknown>).statusCode = 404;
-        throw error;
+        throw new AppError('Source account not found', 404);
       }
 
       if (sourceAccount.status === AccountStatus.FROZEN) {
-        const error = new Error('Source account is frozen. Transfers are blocked.');
-        (error as Record<string, unknown>).statusCode = 403;
-        throw error;
+        throw new AppError('Source account is frozen. Transfers are blocked.', 403);
       }
 
       if (sourceAccount.status === AccountStatus.CLOSED) {
-        const error = new Error('Source account is closed. Transfers are blocked.');
-        (error as Record<string, unknown>).statusCode = 400;
-        throw error;
+        throw new AppError('Source account is closed. Transfers are blocked.', 400);
       }
 
       if (sourceAccount.user.status !== UserStatus.ACTIVE) {
-        const error = new Error('Account onboarding approval required before executing transfers.');
-        (error as Record<string, unknown>).statusCode = 403;
-        throw error;
+        throw new AppError('Account onboarding approval required before executing transfers.', 403);
       }
 
       // 2. Destination account lookup
@@ -455,28 +419,20 @@ export class LedgerService {
       });
 
       if (!destAccount) {
-        const error = new Error('Destination account number not found');
-        (error as Record<string, unknown>).statusCode = 404;
-        throw error;
+        throw new AppError('Destination account number not found', 404);
       }
 
       // Self-transfer rejection
       if (sourceAccount.id === destAccount.id) {
-        const error = new Error('Cannot transfer funds to the same source account');
-        (error as Record<string, unknown>).statusCode = 400;
-        throw error;
+        throw new AppError('Cannot transfer funds to the same source account', 400);
       }
 
       if (destAccount.status === AccountStatus.FROZEN) {
-        const error = new Error('Destination account is frozen. Transfers cannot be accepted.');
-        (error as Record<string, unknown>).statusCode = 400;
-        throw error;
+        throw new AppError('Destination account is frozen. Transfers cannot be accepted.', 400);
       }
 
       if (destAccount.status === AccountStatus.CLOSED) {
-        const error = new Error('Destination account is closed. Transfers cannot be accepted.');
-        (error as Record<string, unknown>).statusCode = 400;
-        throw error;
+        throw new AppError('Destination account is closed. Transfers cannot be accepted.', 400);
       }
 
       // 3. Deadlock Prevention: Sort account IDs lexicographically before locking
@@ -495,12 +451,11 @@ export class LedgerService {
 
       // 5. Balance Check
       if (lockedSource.balance < params.amount) {
-        const error = new Error(
-          `Insufficient funds. Available: ${lockedSource.balance.toString()} minor units, Required: ${params.amount.toString()}`
+        throw new AppError(
+          `Insufficient funds. Available: ${lockedSource.balance.toString()} minor units, Required: ${params.amount.toString()}`,
+          400,
+          'INSUFFICIENT_FUNDS'
         );
-        (error as Record<string, unknown>).statusCode = 400;
-        (error as Record<string, unknown>).code = 'INSUFFICIENT_FUNDS';
-        throw error;
       }
 
       // 6. Atomic balance updates
@@ -611,9 +566,7 @@ export class LedgerService {
     });
 
     if (!account) {
-      const error = new Error('Account not found');
-      (error as Record<string, unknown>).statusCode = 404;
-      throw error;
+      throw new AppError('Account not found', 404);
     }
 
     // 2. Fetch paginated ledger entries

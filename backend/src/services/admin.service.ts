@@ -1,6 +1,7 @@
 import { Role, UserStatus, AccountStatus } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { AuditService } from './audit.service.js';
+import { AppError } from '../utils/errors.js';
 
 export interface ListUsersParams {
   role?: Role;
@@ -84,15 +85,11 @@ export class AdminService {
     });
 
     if (!targetUser) {
-      const error = new Error('Target user not found');
-      (error as Record<string, unknown>).statusCode = 404;
-      throw error;
+      throw new AppError('Target user not found', 404);
     }
 
     if (targetUser.status === UserStatus.ACTIVE) {
-      const error = new Error('User is already approved and active');
-      (error as Record<string, unknown>).statusCode = 400;
-      throw error;
+      throw new AppError('User is already approved and active', 400);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -132,16 +129,12 @@ export class AdminService {
     });
 
     if (!targetUser) {
-      const error = new Error('Target user not found');
-      (error as Record<string, unknown>).statusCode = 404;
-      throw error;
+      throw new AppError('Target user not found', 404);
     }
 
     // Admins cannot suspend themselves
     if (adminId === targetUserId) {
-      const error = new Error('Administrators cannot suspend their own account');
-      (error as Record<string, unknown>).statusCode = 400;
-      throw error;
+      throw new AppError('Administrators cannot suspend their own account', 400);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -187,9 +180,7 @@ export class AdminService {
     });
 
     if (!account) {
-      const error = new Error('Account not found');
-      (error as Record<string, unknown>).statusCode = 404;
-      throw error;
+      throw new AppError('Account not found', 404);
     }
 
     return prisma.$transaction(async (tx) => {
@@ -224,9 +215,7 @@ export class AdminService {
     });
 
     if (!account) {
-      const error = new Error('Account not found');
-      (error as Record<string, unknown>).statusCode = 404;
-      throw error;
+      throw new AppError('Account not found', 404);
     }
 
     return prisma.$transaction(async (tx) => {

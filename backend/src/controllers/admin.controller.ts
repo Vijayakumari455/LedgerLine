@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AdminService } from '../services/admin.service.js';
 import { AuthenticatedRequest } from '../types/auth.js';
 import { Role, UserStatus } from '../constants/roles.js';
+import { AppError } from '../utils/errors.js';
 
 export const listUsersSchema = z.object({
   query: z.object({
@@ -52,8 +53,17 @@ export class AdminController {
   static async approveUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const adminId = req.user!.id;
-      const targetUserId = req.params.userId;
+      const rawUserId = req.params.userId;
 
+      if (typeof rawUserId !== 'string' || !rawUserId.trim()) {
+        res.status(400).json({
+          error: 'INVALID_PARAMETER',
+          message: 'Valid userId route parameter is required',
+        });
+        return;
+      }
+
+      const targetUserId = rawUserId.trim();
       const user = await AdminService.approveUser(adminId, targetUserId);
 
       res.status(200).json({
@@ -61,11 +71,10 @@ export class AdminController {
         user,
       });
     } catch (err) {
-      const error = err as Record<string, unknown>;
-      if (error.statusCode) {
-        res.status(error.statusCode as number).json({
-          error: 'ACTION_FAILED',
-          message: error.message,
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({
+          error: err.code || 'ACTION_FAILED',
+          message: err.message,
         });
         return;
       }
@@ -76,7 +85,17 @@ export class AdminController {
   static async rejectUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const adminId = req.user!.id;
-      const targetUserId = req.params.userId;
+      const rawUserId = req.params.userId;
+
+      if (typeof rawUserId !== 'string' || !rawUserId.trim()) {
+        res.status(400).json({
+          error: 'INVALID_PARAMETER',
+          message: 'Valid userId route parameter is required',
+        });
+        return;
+      }
+
+      const targetUserId = rawUserId.trim();
       const reason = req.body?.reason;
 
       const user = await AdminService.rejectUser(adminId, targetUserId, reason);
@@ -86,11 +105,10 @@ export class AdminController {
         user,
       });
     } catch (err) {
-      const error = err as Record<string, unknown>;
-      if (error.statusCode) {
-        res.status(error.statusCode as number).json({
-          error: 'ACTION_FAILED',
-          message: error.message,
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({
+          error: err.code || 'ACTION_FAILED',
+          message: err.message,
         });
         return;
       }
@@ -101,7 +119,17 @@ export class AdminController {
   static async freezeAccount(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const adminId = req.user!.id;
-      const accountId = req.params.accountId;
+      const rawAccountId = req.params.accountId;
+
+      if (typeof rawAccountId !== 'string' || !rawAccountId.trim()) {
+        res.status(400).json({
+          error: 'INVALID_PARAMETER',
+          message: 'Valid accountId route parameter is required',
+        });
+        return;
+      }
+
+      const accountId = rawAccountId.trim();
       const reason = req.body?.reason;
 
       const account = await AdminService.freezeAccount(adminId, accountId, reason);
@@ -111,11 +139,10 @@ export class AdminController {
         account,
       });
     } catch (err) {
-      const error = err as Record<string, unknown>;
-      if (error.statusCode) {
-        res.status(error.statusCode as number).json({
-          error: 'ACTION_FAILED',
-          message: error.message,
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({
+          error: err.code || 'ACTION_FAILED',
+          message: err.message,
         });
         return;
       }
@@ -126,8 +153,17 @@ export class AdminController {
   static async unfreezeAccount(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const adminId = req.user!.id;
-      const accountId = req.params.accountId;
+      const rawAccountId = req.params.accountId;
 
+      if (typeof rawAccountId !== 'string' || !rawAccountId.trim()) {
+        res.status(400).json({
+          error: 'INVALID_PARAMETER',
+          message: 'Valid accountId route parameter is required',
+        });
+        return;
+      }
+
+      const accountId = rawAccountId.trim();
       const account = await AdminService.unfreezeAccount(adminId, accountId);
 
       res.status(200).json({
@@ -135,11 +171,10 @@ export class AdminController {
         account,
       });
     } catch (err) {
-      const error = err as Record<string, unknown>;
-      if (error.statusCode) {
-        res.status(error.statusCode as number).json({
-          error: 'ACTION_FAILED',
-          message: error.message,
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({
+          error: err.code || 'ACTION_FAILED',
+          message: err.message,
         });
         return;
       }

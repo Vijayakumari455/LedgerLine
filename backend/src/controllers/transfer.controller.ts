@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { LedgerService } from '../services/ledger.service.js';
 import { AuthenticatedRequest } from '../types/auth.js';
+import { AppError } from '../utils/errors.js';
 
 export const depositSchema = z.object({
   body: z.object({
@@ -54,11 +55,10 @@ export class TransferController {
         ...result,
       });
     } catch (err) {
-      const error = err as Record<string, unknown>;
-      if (error.statusCode) {
-        res.status(error.statusCode as number).json({
-          error: error.code || 'DEPOSIT_FAILED',
-          message: error.message,
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({
+          error: err.code || 'DEPOSIT_FAILED',
+          message: err.message,
         });
         return;
       }
@@ -81,11 +81,10 @@ export class TransferController {
         ...result,
       });
     } catch (err) {
-      const error = err as Record<string, unknown>;
-      if (error.statusCode) {
-        res.status(error.statusCode as number).json({
-          error: error.code || 'WITHDRAWAL_FAILED',
-          message: error.message,
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({
+          error: err.code || 'WITHDRAWAL_FAILED',
+          message: err.message,
         });
         return;
       }
@@ -109,11 +108,10 @@ export class TransferController {
         ...result,
       });
     } catch (err) {
-      const error = err as Record<string, unknown>;
-      if (error.statusCode) {
-        res.status(error.statusCode as number).json({
-          error: error.code || 'TRANSFER_FAILED',
-          message: error.message,
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({
+          error: err.code || 'TRANSFER_FAILED',
+          message: err.message,
         });
         return;
       }
@@ -123,20 +121,29 @@ export class TransferController {
 
   static async getStatement(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      const rawAccountId = req.params.accountId;
+      if (typeof rawAccountId !== 'string' || !rawAccountId.trim()) {
+        res.status(400).json({
+          error: 'INVALID_PARAMETER',
+          message: 'Valid accountId route parameter is required',
+        });
+        return;
+      }
+
+      const accountId = rawAccountId.trim();
       const result = await LedgerService.getStatement({
         userId: req.user!.id,
-        accountId: req.params.accountId,
+        accountId,
         page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 20,
       });
 
       res.status(200).json(result);
     } catch (err) {
-      const error = err as Record<string, unknown>;
-      if (error.statusCode) {
-        res.status(error.statusCode as number).json({
-          error: error.code || 'STATEMENT_FETCH_FAILED',
-          message: error.message,
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({
+          error: err.code || 'STATEMENT_FETCH_FAILED',
+          message: err.message,
         });
         return;
       }

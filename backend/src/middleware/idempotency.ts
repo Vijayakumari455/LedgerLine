@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { AuthenticatedRequest } from '../types/auth.js';
 
@@ -8,6 +9,82 @@ export const IDEMPOTENCY_HEADER = 'idempotency-key';
 export function computeRequestHash(body: unknown): string {
   const serialized = JSON.stringify(body || {});
   return crypto.createHash('sha256').update(serialized).digest('hex');
+}
+
+interface JsonSerializable {
+  toJSON(): unknown;
+}
+
+function isJsonSerializable(value: unknown): value is JsonSerializable {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'toJSON' in value &&
+    typeof value.toJSON === 'function'
+  );
+}
+
+/**
+ * Type-safe recursive conversion of arbitrary values to Prisma-compatible JSON input.
+ * Strictly preserves JSON response semantics:
+ * - Date objects -> ISO 8601 strings (or null if invalid date)
+ * - Non-finite numbers (NaN, Infinity, -Infinity) -> null
+ * - BigInt values -> decimal string representation
+ * - Undefined object properties -> omitted
+ * - Array elements that are undefined/unserializable -> null
+ * - Objects with toJSON() method -> evaluated recursively
+ * - Primitives and nulls -> preserved
+ */
+export function toInputJsonValue(value: unknown): Prisma.InputJsonValue | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  // Handle objects with custom toJSON method (e.g., Date, custom classes)
+  if (isJsonSerializable(value)) {
+    return toInputJsonValue(value.toJSON());
+  }
+
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value.toISOString();
+  }
+
+  if (typeof value === 'string' || typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => toInputJsonValue(item));
+  }
+
+  if (typeof value === 'object') {
+    const obj: { [key: string]: Prisma.InputJsonValue | null } = {};
+    for (const [key, val] of Object.entries(value)) {
+      if (val !== undefined && typeof val !== 'function' && typeof val !== 'symbol') {
+        obj[key] = toInputJsonValue(val);
+      }
+    }
+    return obj;
+  }
+
+  // Fallback for unserializable types outside objects
+  return null;
+}
+
+export function toSafeResponseBody(body: unknown): Prisma.InputJsonValue | Prisma.JsonNullValueInput {
+  const converted = toInputJsonValue(body);
+  if (converted === null) {
+    return Prisma.JsonNull;
+  }
+  return converted;
 }
 
 /**
@@ -111,14 +188,17 @@ export async function requireIdempotency(
     // 4. Intercept response to update record with final response status & body
     const originalJson = res.json.bind(res);
 
-    res.json = (body: Record<string, unknown>): Response => {
+    res.json = (body: unknown): Response => {
+      // Type-safely convert response body to Prisma-compatible JSON input
+      const safeResponseBody = toSafeResponseBody(body);
+
       // Update record with completed response
       prisma.idempotencyRecord
         .update({
           where: { key },
           data: {
             responseCode: res.statusCode,
-            responseBody: body,
+            responseBody: safeResponseBody,
           },
         })
         .catch((err) => {
@@ -131,8 +211,10 @@ export async function requireIdempotency(
     next();
   } catch (err) {
     // Handle database uniqueness collision if two identical requests insert at the exact same millisecond
-    const error = err as Record<string, unknown>;
-    if (error.code === 'P2002') {
+    if (
+      (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') ||
+      (typeof err === 'object' && err !== null && 'code' in err && (err as { code: string }).code === 'P2002')
+    ) {
       res.status(409).json({
         error: 'TRANSACTION_CONCURRENCY_CONFLICT',
         message: 'Concurrent duplicate request detected with identical Idempotency-Key',

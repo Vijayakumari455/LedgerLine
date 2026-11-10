@@ -39,7 +39,17 @@ export class AccountController {
   static async getAccountById(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.user!.id;
-      const accountId = req.params.accountId;
+      const rawAccountId = req.params.accountId;
+
+      if (typeof rawAccountId !== 'string' || !rawAccountId.trim()) {
+        res.status(400).json({
+          error: 'INVALID_PARAMETER',
+          message: 'Valid accountId route parameter is required',
+        });
+        return;
+      }
+
+      const accountId = rawAccountId.trim();
 
       const account = await prisma.account.findFirst({
         where: { id: accountId, userId },
