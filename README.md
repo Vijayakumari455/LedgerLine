@@ -102,3 +102,4 @@ npm run dev
 ## 5. Repository Documentation
 * `THREATS.md`: Threat model, STRIDE attack vectors, and matching test references.
 * `PROMPTS.md`: Genuine record of AI direction, caught hallucinations, and architectural decisions.
+

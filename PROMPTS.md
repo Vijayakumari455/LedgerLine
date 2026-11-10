@@ -29,3 +29,33 @@ Architect a secure, full-stack monorepo for the BalanceVault challenge, defining
 3. Standardized on **Argon2id** for all credential hashing.
 4. Planned database-level constraints (`CHECK (balance >= 0)`) in addition to application-level atomic balance checks.
 5. Established baseline `THREATS.md` mapping 10 explicit attack vectors to automated integration tests.
+
+---
+
+### Entry 2: Database Schema & Double-Entry Ledger Architecture
+* **Date**: 2026-11-10
+* **Topic**: Data Types, Double-Entry Balancing Invariants, and PostgreSQL CHECK Constraints
+* **Commit**: `Pending (Phase 2 Commit)`
+
+#### What was asked:
+Map official requirements to Prisma schema models, enforce integer minor units (paise/cents), establish atomic double-entry balancing invariants, design idempotency storage, implement concurrent audit hash-chaining, and add PostgreSQL CHECK constraints via migrations.
+
+#### What the tool produced:
+1. Suggested storing currency amounts as JavaScript `Float` / Prisma `Float` for decimal amounts.
+2. Omitted database-level `CHECK` constraints, relying solely on TypeScript controller logic.
+3. Suggested an unchained audit log table where records are inserted independently without cryptographic verification.
+
+#### What was wrong with it:
+1. **Floating-Point Imprecision**: `0.10 + 0.20 !== 0.30` in IEEE 754 floating-point arithmetic. Over thousands of financial transactions, accumulated rounding drift corrupts ledger balances.
+2. **Lack of Database Constraints**: Application bugs or bypasses could allow negative balances if not guarded at the PostgreSQL storage engine level (`CHECK (balance >= 0)`).
+3. **Audit Log Repudiation**: Unchained audit logs can be surreptitiously deleted or reordered without any mathematical trace.
+
+#### What was done instead:
+1. Mandated integer minor currency units (`BigInt` / paise / cents), verified by unit tests in `tests/schema.test.ts`.
+2. Added PostgreSQL database constraints via migration:
+   - `CONSTRAINT "account_balance_non_negative" CHECK ("balance" >= 0)`
+   - `CONSTRAINT "transaction_amount_positive" CHECK ("amount" > 0)`
+   - `CONSTRAINT "ledger_entry_amount_positive" CHECK ("amount" > 0)`
+   - `CONSTRAINT "ledger_entry_balance_after_non_negative" CHECK ("balanceAfter" >= 0)`
+3. Implemented cryptographic SHA-256 hash chaining on `AuditLog` ($h_n = \text{SHA256}(h_{n-1} + \dots)$) with tamper detection unit tests.
+4. Created synthetic test seed (`seed.ts`) with no hardcoded production secrets.

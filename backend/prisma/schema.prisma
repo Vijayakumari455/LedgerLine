@@ -1,0 +1,168 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+  CUSTOMER
+}
+
+enum UserStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+}
+
+enum AccountStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum EntryType {
+  DEBIT
+  CREDIT
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  role         Role       @default(CUSTOMER)
+  status       UserStatus @default(PENDING_APPROVAL)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  accounts     Account[]
+  sessions     Session[]
+  auditLogs    AuditLog[] @relation("UserAuditLogs")
+
+  @@index([email])
+  @@index([role, status])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  csrfToken String
+  ipAddress String?
+  userAgent String?
+  isRevoked Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model Account {
+  id            String        @id @default(uuid())
+  accountNumber String        @unique
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  balance       BigInt        @default(0)
+  currency      String        @default("INR")
+  status        AccountStatus @default(ACTIVE)
+  version       Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  ledgerEntries LedgerEntry[]
+
+  @@index([userId])
+  @@index([accountNumber])
+}
+
+model Transaction {
+  id             String            @id @default(uuid())
+  referenceId    String            @unique
+  type           TransactionType
+  status         TransactionStatus @default(PENDING)
+  amount         BigInt
+  currency       String            @default("INR")
+  description    String?
+  idempotencyKey String?           @unique
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  completedAt    DateTime?
+
+  entries        LedgerEntry[]
+
+  @@index([referenceId])
+  @@index([idempotencyKey])
+}
+
+model LedgerEntry {
+  id            String      @id @default(uuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  accountId     String
+  account       Account     @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  entryType     EntryType
+  amount        BigInt
+  balanceAfter  BigInt
+  createdAt     DateTime    @default(now())
+
+  @@index([transactionId])
+  @@index([accountId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  sequenceNumber Int      @unique @default(autoincrement())
+  timestamp      DateTime @default(now())
+  actorId        String?
+  actor          User?    @relation("UserAuditLogs", fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole      String?
+  action         String
+  resource       String
+  resourceId     String?
+  ipAddress      String?
+  status         String
+  details        Json?
+  previousHash   String
+  currentHash    String
+
+  @@index([sequenceNumber])
+  @@index([actorId])
+  @@index([action])
+  @@index([timestamp])
+}
+
+model IdempotencyRecord {
+  id           String   @id @default(uuid())
+  key          String   @unique
+  userId       String
+  route        String
+  requestHash  String
+  responseCode Int
+  responseBody Json
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@index([key])
+  @@index([userId])
+}

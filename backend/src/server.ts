@@ -16,3 +16,4 @@ process.on('SIGTERM', () => {
     console.log('[LedgerLine] Process terminated.');
   });
 });
+
