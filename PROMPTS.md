@@ -91,7 +91,7 @@ Implement Argon2id password hashing, HttpOnly cookie session management, double-
 ### Entry 4: One-Time Administrator Bootstrap & Customer Onboarding Workflow
 * **Date**: 2026-11-10
 * **Topic**: Safe Provisioning, Admin Re-run Hijacking Prevention, and Onboarding Session Revocation
-* **Commit**: `Pending (Phase 4 Commit)`
+* **Commit**: `5e3f1ba` (feat(admin): implement one-time admin bootstrap CLI, onboarding review API, and account freeze controls)
 
 #### What was asked:
 Implement a safe, one-time administrator bootstrap mechanism and the customer onboarding review flow (approving/rejecting customers, emergency account freezes, and session invalidation).
