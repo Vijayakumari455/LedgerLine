@@ -1,0 +1,34 @@
+{
+  "name": "ledgerline",
+  "version": "1.0.0",
+  "description": "BalanceVault / LedgerLine - Provable financial ledger with strict RBAC, auditability, and tamper detection",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace=backend run dev",
+    "dev:frontend": "npm --workspace=frontend run dev",
+    "dev": "npm --workspace=backend run dev",
+    "build:backend": "npm --workspace=backend run build",
+    "build:frontend": "npm --workspace=frontend run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "test": "npm --workspace=backend run test",
+    "test:watch": "npm --workspace=backend run test:watch",
+    "db:generate": "npm --workspace=backend run db:generate",
+    "db:migrate": "npm --workspace=backend run db:migrate",
+    "db:seed": "npm --workspace=backend run db:seed",
+    "admin:bootstrap": "npm --workspace=backend run admin:bootstrap"
+  },
+  "keywords": [
+    "fintech",
+    "ledger",
+    "double-entry",
+    "rbac",
+    "audit-trail",
+    "security"
+  ],
+  "author": "Vijayakumari Katuri",
+  "license": "UNLICENSED"
+}
