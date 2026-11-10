@@ -117,7 +117,7 @@ Implement a safe, one-time administrator bootstrap mechanism and the customer on
 ### Entry 5: Money Movement & Double-Entry Ledger Engine
 * **Date**: 2026-11-10
 * **Topic**: Deadlock Prevention, Counterpart Clearing Accounts, and Idempotency Payload Mismatch Detection
-* **Commit**: `Pending (Phase 5 Commit)`
+* **Commit**: `f87e5d2` (feat(ledger): implement atomic double-entry money movement, idempotency hashing, IDOR defense, and concurrency test suites)
 
 #### What was asked:
 Implement atomic deposits, withdrawals, peer-to-peer transfers, double-entry bookkeeping, idempotency protection with payload hashing, IDOR defenses, provable account statements, and concurrency race-condition test suites.
