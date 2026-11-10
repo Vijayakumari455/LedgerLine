@@ -16,3 +16,4 @@ if (process.env.NODE_ENV !== 'production') {
 export async function disconnectDatabase(): Promise<void> {
   await prisma.$disconnect();
 }
+

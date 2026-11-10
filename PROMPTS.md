@@ -59,3 +59,29 @@ Map official requirements to Prisma schema models, enforce integer minor units (
    - `CONSTRAINT "ledger_entry_balance_after_non_negative" CHECK ("balanceAfter" >= 0)`
 3. Implemented cryptographic SHA-256 hash chaining on `AuditLog` ($h_n = \text{SHA256}(h_{n-1} + \dots)$) with tamper detection unit tests.
 4. Created synthetic test seed (`seed.ts`) with no hardcoded production secrets.
+
+---
+
+### Entry 3: Authentication, RBAC & Security Middleware
+* **Date**: 2026-11-10
+* **Topic**: Authorization Enforcement, CSRF Protection, and Privilege Escalation Prevention
+* **Commit**: `Pending (Phase 3 Commit)`
+
+#### What was asked:
+Implement Argon2id password hashing, HttpOnly cookie session management, double-submit CSRF protection, server-side RBAC for ADMIN, OPERATOR, and CUSTOMER, Zod request schemas, rate limiting, and automated security verification tests.
+
+#### What the tool produced:
+1. Suggested accepting an optional `role` parameter in the registration request payload, defaulting to `CUSTOMER` if absent, to simplify testing multiple user roles.
+2. Suggested an authorization middleware check that could fall back to an `X-User-Role` request header during development.
+3. Initially generated Supertest tests that attempted to bind ephemeral TCP loopback ports (`127.0.0.1:<port>`), which failed in the isolated Windows sandbox with `connect EACCES`.
+
+#### What was wrong with it:
+1. **Privilege Escalation Vulnerability (T-01)**: Accepting a `role` parameter in the registration payload—even optionally—allows an attacker to submit `{ role: "ADMIN" }` and gain instant administrative privileges. Public registration must strictly and unconditionally assign `CUSTOMER` and `PENDING_APPROVAL`.
+2. **Insecure Client Trust**: Reading roles from client-supplied HTTP headers breaks server-side trust boundaries. The server must only trust identity and roles retrieved directly from verified database sessions.
+3. **Sandbox Network Port Restrictions**: Attempting to bind TCP sockets inside the sandbox triggered Windows access errors.
+
+#### What was done instead:
+1. Hardcoded server-side role assignment in `AuthService.register`: any client-supplied `role` or `status` is stripped by Zod validation and explicitly overridden in Prisma (`role: Role.CUSTOMER`, `status: UserStatus.PENDING_APPROVAL`).
+2. Built `requireRole` middleware that derives identity strictly from authenticated, server-hashed sessions (`prisma.session`).
+3. Implemented double-submit CSRF protection (`csrfProtection`) with timing-safe comparison (`timingSafeEqual`).
+4. Refactored middleware tests to execute directly against mock request/response contexts, eliminating TCP socket dependencies and achieving hermetic testing.

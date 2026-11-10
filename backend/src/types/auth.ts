@@ -15,3 +15,4 @@ export interface AuthenticatedRequest extends Request {
   csrfToken?: string;
   idempotencyKey?: string;
 }
+

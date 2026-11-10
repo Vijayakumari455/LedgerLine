@@ -178,3 +178,4 @@ export class AuditService {
     return { isValid: true, totalEntries: entries.length };
   }
 }
+

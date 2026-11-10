@@ -19,3 +19,4 @@ export const ACCOUNT_STATUS = {
   FROZEN: AccountStatus.FROZEN,
   CLOSED: AccountStatus.CLOSED,
 } as const;
+
