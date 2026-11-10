@@ -35,7 +35,7 @@ Architect a secure, full-stack monorepo for the BalanceVault challenge, defining
 ### Entry 2: Database Schema & Double-Entry Ledger Architecture
 * **Date**: 2026-11-10
 * **Topic**: Data Types, Double-Entry Balancing Invariants, and PostgreSQL CHECK Constraints
-* **Commit**: `Pending (Phase 2 Commit)`
+* **Commit**: `f5a8ed7` (feat(db): implement Prisma schema, SQL migrations with CHECK constraints, seed, and invariant tests)
 
 #### What was asked:
 Map official requirements to Prisma schema models, enforce integer minor units (paise/cents), establish atomic double-entry balancing invariants, design idempotency storage, implement concurrent audit hash-chaining, and add PostgreSQL CHECK constraints via migrations.
