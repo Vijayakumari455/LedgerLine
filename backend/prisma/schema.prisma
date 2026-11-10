@@ -166,3 +166,4 @@ model IdempotencyRecord {
   @@index([key])
   @@index([userId])
 }
+
