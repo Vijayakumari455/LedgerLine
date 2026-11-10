@@ -85,3 +85,29 @@ Implement Argon2id password hashing, HttpOnly cookie session management, double-
 2. Built `requireRole` middleware that derives identity strictly from authenticated, server-hashed sessions (`prisma.session`).
 3. Implemented double-submit CSRF protection (`csrfProtection`) with timing-safe comparison (`timingSafeEqual`).
 4. Refactored middleware tests to execute directly against mock request/response contexts, eliminating TCP socket dependencies and achieving hermetic testing.
+
+---
+
+### Entry 4: One-Time Administrator Bootstrap & Customer Onboarding Workflow
+* **Date**: 2026-11-10
+* **Topic**: Safe Provisioning, Admin Re-run Hijacking Prevention, and Onboarding Session Revocation
+* **Commit**: `Pending (Phase 4 Commit)`
+
+#### What was asked:
+Implement a safe, one-time administrator bootstrap mechanism and the customer onboarding review flow (approving/rejecting customers, emergency account freezes, and session invalidation).
+
+#### What the tool produced:
+1. Suggested an API endpoint `/api/admin/bootstrap` protected by an HTTP query parameter `?secret=xyz` to run the bootstrap over the network.
+2. In the bootstrap logic, only checked if the specified admin email existed, allowing someone to rerun bootstrap with a different email address to create a second administrator.
+3. In customer rejection, updated user status to `SUSPENDED` but did not revoke existing sessions, leaving already-authenticated sessions active until expiration.
+
+#### What was wrong with it:
+1. **HTTP Exposure & Log Leakage**: Providing secrets in HTTP query parameters leaks the secret in server access logs, browser history, and proxy logs. Furthermore, exposing any bootstrap endpoint over public HTTP violates the requirement for zero public bootstrap endpoints.
+2. **Multi-Admin Hijacking**: Checking only if the target email existed meant an attacker who obtained the secret could create `admin2@evil.com`, bypassing the one-time invariant. The check must query for ANY user with `role === Role.ADMIN`.
+3. **Stale Session Access**: Demoting or suspending a user without immediately revoking their active sessions allows an unapproved or suspended user to continue executing API calls using their pre-existing session cookie.
+
+#### What was done instead:
+1. Encapsulated the bootstrap strictly into a secure CLI tool (`src/scripts/bootstrap-admin.ts` / `npm run admin:bootstrap`), reading `ADMIN_BOOTSTRAP_SECRET` from secure environment variables.
+2. Enforced a global database check: if ANY administrator exists (`prisma.user.findFirst({ where: { role: Role.ADMIN } })`), the script strictly aborts with `BOOTSTRAP_ALREADY_COMPLETED`.
+3. Enforced immediate atomic revocation of all active sessions (`tx.session.updateMany({ where: { userId }, data: { isRevoked: true } })`) upon rejection/suspension.
+4. Appended all administrative actions to the cryptographic audit trail.

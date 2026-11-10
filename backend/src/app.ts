@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { authRouter } from './routes/auth.routes.js';
+import { adminRouter } from './routes/admin.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { getCacheClient } from './config/redis.js';
 import { prisma } from './config/database.js';
@@ -81,6 +82,7 @@ export const createApp = (): Application => {
 
   // 6. API Route Handlers
   app.use('/api/auth', authRouter);
+  app.use('/api/admin', adminRouter);
 
   // 7. 404 Catch-All Handler
   app.use((_req: Request, res: Response) => {
