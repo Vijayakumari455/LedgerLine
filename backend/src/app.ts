@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { authRouter } from './routes/auth.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
+import { accountRouter } from './routes/account.routes.js';
+import { transferRouter } from './routes/transfer.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { getCacheClient } from './config/redis.js';
 import { prisma } from './config/database.js';
@@ -32,7 +34,7 @@ export const createApp = (): Application => {
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'Idempotency-Key'],
-      exposedHeaders: ['X-CSRF-Token', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
+      exposedHeaders: ['X-CSRF-Token', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-Idempotent-Replay'],
     })
   );
 
@@ -83,6 +85,8 @@ export const createApp = (): Application => {
   // 6. API Route Handlers
   app.use('/api/auth', authRouter);
   app.use('/api/admin', adminRouter);
+  app.use('/api/accounts', accountRouter);
+  app.use('/api/transfers', transferRouter);
 
   // 7. 404 Catch-All Handler
   app.use((_req: Request, res: Response) => {

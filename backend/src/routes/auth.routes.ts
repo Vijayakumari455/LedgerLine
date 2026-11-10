@@ -34,3 +34,4 @@ router.get(
 );
 
 export const authRouter = router;
+

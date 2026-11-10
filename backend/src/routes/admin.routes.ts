@@ -52,3 +52,4 @@ router.post(
 );
 
 export const adminRouter = router;
+

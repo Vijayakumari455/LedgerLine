@@ -54,3 +54,4 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
 
   next();
 }
+

@@ -56,3 +56,4 @@ export const apiRateLimiter = createRateLimiter({
   maxRequests: 100,   // 100 requests
   keyPrefix: 'general_api',
 });
+

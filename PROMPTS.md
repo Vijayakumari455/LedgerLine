@@ -111,3 +111,29 @@ Implement a safe, one-time administrator bootstrap mechanism and the customer on
 2. Enforced a global database check: if ANY administrator exists (`prisma.user.findFirst({ where: { role: Role.ADMIN } })`), the script strictly aborts with `BOOTSTRAP_ALREADY_COMPLETED`.
 3. Enforced immediate atomic revocation of all active sessions (`tx.session.updateMany({ where: { userId }, data: { isRevoked: true } })`) upon rejection/suspension.
 4. Appended all administrative actions to the cryptographic audit trail.
+
+---
+
+### Entry 5: Money Movement & Double-Entry Ledger Engine
+* **Date**: 2026-11-10
+* **Topic**: Deadlock Prevention, Counterpart Clearing Accounts, and Idempotency Payload Mismatch Detection
+* **Commit**: `Pending (Phase 5 Commit)`
+
+#### What was asked:
+Implement atomic deposits, withdrawals, peer-to-peer transfers, double-entry bookkeeping, idempotency protection with payload hashing, IDOR defenses, provable account statements, and concurrency race-condition test suites.
+
+#### What the tool produced:
+1. For deposits and withdrawals, initially only created single-entry ledger rows on the customer account, leaving total system debits and credits unbalanced ($\sum \text{Debits} \neq \sum \text{Credits}$).
+2. In the transfer method, locked `sourceAccountId` then `destinationAccountId` in whatever arbitrary order was passed in the request body.
+3. In idempotency handling, only checked key existence without hashing the request payload, meaning submitting the same key with different amounts would replay the old response blindly without error.
+
+#### What was wrong with it:
+1. **Double-Entry Invariant Violation**: In authentic double-entry accounting, every single transaction must balance ($\text{Debits} == \text{Credits}$). Creating unilateral single entries on deposits or withdrawals breaks the foundational accounting equation.
+2. **Database Deadlock Risk**: If Alice transfers to Bob at the same time Bob transfers to Alice, Thread 1 locks Alice then waits for Bob, while Thread 2 locks Bob then waits for Alice, creating an immediate cyclic database deadlock.
+3. **Idempotency Semantic Collision**: Reusing the same key with different parameters (e.g., amount ₹500 vs ₹5,000) is a client error that must be explicitly rejected with `422 Unprocessable Entity` rather than silently replaying a conflicting response.
+
+#### What was done instead:
+1. Introduced a designated System Settlement/Clearing account (`SYSTEM-SETTLEMENT-CLEARING-000000`). Deposits debit clearing and credit customer; withdrawals debit customer and credit clearing. Total debits strictly equal total credits for all operations.
+2. Implemented lexicographical lock sorting (`[firstId, secondId] = [source.id, dest.id].sort()`), completely eliminating circular wait deadlocks.
+3. Added SHA-256 request payload hashing (`computeRequestHash`) to `IdempotencyRecord`. Reused keys with matching payloads return `200 OK` (with `X-Idempotent-Replay: true`); conflicting payloads return `422 Unprocessable Entity`; concurrent in-flight requests return `409 Conflict`.
+4. Created 17 unit test cases in `tests/ledger.test.ts` and `tests/concurrency.test.ts` validating all financial invariants and race condition protections, while honestly documenting skipped PostgreSQL integration tests in `tests/postgres-integration.test.ts`.

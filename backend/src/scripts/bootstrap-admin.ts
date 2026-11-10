@@ -94,3 +94,4 @@ if (process.argv[1]?.includes('bootstrap-admin')) {
       await prisma.$disconnect();
     });
 }
+
