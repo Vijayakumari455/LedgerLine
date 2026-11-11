@@ -1,8 +1,17 @@
 import crypto from 'crypto';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { prisma } from '../config/database.js';
 
 export const GENESIS_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
 export const AUDIT_ADVISORY_LOCK_ID = 742910385; // Deterministic integer for pg_advisory_xact_lock
+
+export interface ListAuditLogsParams {
+  page?: number;
+  limit?: number;
+  action?: string;
+  resource?: string;
+  actorId?: string;
+}
 
 export interface CreateAuditLogParams {
   actorId?: string | null;
@@ -108,9 +117,48 @@ export class AuditService {
   }
 
   /**
+   * List paginated audit logs with optional filters
+   */
+  static async listLogs(
+    params: ListAuditLogsParams = {},
+    prismaClient: PrismaClient | Prisma.TransactionClient = prisma
+  ) {
+    const page = Math.max(1, params.page || 1);
+    const limit = Math.min(100, Math.max(1, params.limit || 20));
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.AuditLogWhereInput = {};
+    if (params.action) where.action = params.action;
+    if (params.resource) where.resource = params.resource;
+    if (params.actorId) where.actorId = params.actorId;
+
+    const [logs, total] = await Promise.all([
+      prismaClient.auditLog.findMany({
+        where,
+        orderBy: { sequenceNumber: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prismaClient.auditLog.count({ where }),
+    ]);
+
+    return {
+      logs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
    * Cryptographically verify the integrity of the audit chain
    */
-  static async verifyChain(prismaClient: PrismaClient | Prisma.TransactionClient): Promise<{
+  static async verifyChain(
+    prismaClient: PrismaClient | Prisma.TransactionClient = prisma
+  ): Promise<{
     isValid: boolean;
     totalEntries: number;
     brokenAtSequence?: number;

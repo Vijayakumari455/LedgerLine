@@ -6,6 +6,7 @@ import { authRouter } from './routes/auth.routes.js';
 import { adminRouter } from './routes/admin.routes.js';
 import { accountRouter } from './routes/account.routes.js';
 import { transferRouter } from './routes/transfer.routes.js';
+import { auditRouter } from './routes/audit.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { getCacheClient } from './config/redis.js';
 import { prisma } from './config/database.js';
@@ -87,6 +88,7 @@ export const createApp = (): Application => {
   app.use('/api/admin', adminRouter);
   app.use('/api/accounts', accountRouter);
   app.use('/api/transfers', transferRouter);
+  app.use('/api/audit', auditRouter);
 
   // 7. 404 Catch-All Handler
   app.use((_req: Request, res: Response) => {
