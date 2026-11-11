@@ -89,10 +89,10 @@ export const Navbar: FC = () => {
               </div>
               <div>
                 <span className="text-lg font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
-                  BalanceVault
+                  LedgerLine
                 </span>
                 <span className="hidden sm:inline-block ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono uppercase bg-slate-800 text-slate-400 border border-slate-700">
-                  LedgerLine
+                  Core
                 </span>
               </div>
             </Link>
@@ -140,7 +140,7 @@ export const Navbar: FC = () => {
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                title="Sign out of BalanceVault"
+                title="Sign out of LedgerLine"
                 className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all disabled:opacity-50"
               >
                 <LogOut className="w-4 h-4" />

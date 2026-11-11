@@ -23,7 +23,7 @@ export async function bootstrapAdmin(params?: {
   password?: string;
 }): Promise<{ success: boolean; message: string; adminId?: string }> {
   const secret = params?.secret || process.env.ADMIN_BOOTSTRAP_SECRET;
-  const email = (params?.email || process.env.ADMIN_BOOTSTRAP_EMAIL || 'admin@balancevault.local').toLowerCase().trim();
+  const email = (params?.email || process.env.ADMIN_BOOTSTRAP_EMAIL || 'admin@ledgerline.local').toLowerCase().trim();
   const fullName = params?.fullName || process.env.ADMIN_BOOTSTRAP_NAME || 'Primary System Administrator';
   const password = params?.password || process.env.ADMIN_BOOTSTRAP_PASSWORD;
 

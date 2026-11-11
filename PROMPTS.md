@@ -137,3 +137,87 @@ Implement atomic deposits, withdrawals, peer-to-peer transfers, double-entry boo
 2. Implemented lexicographical lock sorting (`[firstId, secondId] = [source.id, dest.id].sort()`), completely eliminating circular wait deadlocks.
 3. Added SHA-256 request payload hashing (`computeRequestHash`) to `IdempotencyRecord`. Reused keys with matching payloads return `200 OK` (with `X-Idempotent-Replay: true`); conflicting payloads return `422 Unprocessable Entity`; concurrent in-flight requests return `409 Conflict`.
 4. Created 17 unit test cases in `tests/ledger.test.ts` and `tests/concurrency.test.ts` validating all financial invariants and race condition protections, while honestly documenting skipped PostgreSQL integration tests in `tests/postgres-integration.test.ts`.
+
+---
+
+### Entry 6: Tamper-Evident Audit Verification & System Observability
+* **Date**: 2026-11-10
+* **Topic**: Cryptographic Chain Verification API, Linear Append Serialization, and Health Probes
+* **Commits**: `ac4689f` (feat(audit): implement secure audit verification API), `6dd4de6` (fix: resolve TypeScript errors and strengthen idempotency serialization)
+
+#### What was asked:
+Implement an end-to-end cryptographic audit verification API (`/api/audit/verify`), an audit explorer service with filtering by actor/resource, process health/liveness probes (`/api/health`) and readiness probes (`/api/ready`) checking PostgreSQL and Redis connectivity.
+
+#### What the tool produced:
+1. Suggested loading the entire audit log table into an in-memory Node.js array to verify hash linkages in JavaScript.
+2. Suggested computing the chained hash without database concurrency locks on `AuditLog` writes.
+3. Left minor TypeScript type errors in idempotency record JSON parsing.
+
+#### What was wrong with it:
+1. **Memory Exhaustion (OOM)**: Loading all historical audit records into Node.js heap causes memory exhaustion as audit history scales.
+2. **Audit Hash Collisions Under Concurrency**: When multiple financial transactions execute concurrently, concurrent transactions reading `lastLog.hash` simultaneously would produce branching or colliding parent hash references, breaking linear hash chain induction.
+3. **TypeScript Serialization Flags**: JSON metadata casting in Prisma models required strict type guards under `strict: true`.
+
+#### What was done instead:
+1. Implemented streamed mathematical verification comparing each row's hash against $h_n = \text{SHA256}(h_{n-1} + \text{payload})$ in bounded batches.
+2. Enforced transactional advisory locking (`SELECT pg_advisory_xact_lock(hashtext('AUDIT_CHAIN_LOCK'))`) during audit log appends, guaranteeing strictly linear, serialized hash progression even under high transaction concurrency.
+3. Added `/api/health` and `/api/ready` endpoints probing database and Redis connections with clean HTTP status reporting.
+4. Resolved all TypeScript typing issues in `6dd4de6`.
+
+---
+
+### Entry 7: Frontend Banking UI, Administrative Console & Provable Audit Explorer
+* **Date**: 2026-11-11
+* **Topic**: Secure Single-Page Application, Money Movement Modals, Admin Console, and Live Audit Badge
+* **Commit**: `d473219` (feat(frontend): implement complete banking UI, admin console, audit explorer, and routing)
+
+#### What was asked:
+Design and build a responsive React 18 + Vite frontend with Tailwind CSS, Lucide icons, customer dashboard, money movement modals (deposit, withdraw, transfer), statement explorer with balance trends, admin user & onboarding management, account freeze controls, and interactive cryptographic audit chain explorer.
+
+#### What the tool produced:
+1. Suggested client-side calculation of balances by summing transactions in React state.
+2. Suggested persisting raw session tokens in `localStorage` and passing `Bearer` tokens in headers.
+3. Left unused imports (`UserCheck`, `Layers`, `Search`) and an unused state setter (`setLimit`), triggering `TS6133` compiler warnings under `"noUnusedLocals": true`.
+
+#### What was wrong with it:
+1. **Financial Integrity Violation**: Client-side financial calculations can be manipulated via browser developer tools. The server must remain the authoritative single source of truth for all balances, limits, and ledger entries.
+2. **XSS Token Exfiltration**: Placing authentication tokens in `localStorage` exposes them to theft via cross-site scripting attacks.
+3. **Build Failures**: Unused variables caused `tsc --noEmit` and `vite build` to fail when strict compiler checks were enabled.
+
+#### What was done instead:
+1. Maintained strict server-side authority: balances, limits, and ledger entries are rendered directly from authenticated, signed server responses.
+2. Kept authentication strictly encapsulated within HttpOnly cookies with automatic double-submit CSRF headers (`X-CSRF-Token`).
+3. Cleaned up all unused variables and imports, achieving 0 TypeScript errors and a clean 8.6-second Vite production build.
+4. Delivered full suite of interactive UI components: Customer Dashboard, Money Movement Modals with automatic client-side UUID idempotency keys, Statement View with CSV export and balance charts, Administrative Onboarding Review with instant session revocation, and an interactive Audit Explorer showing real-time hash chain validity.
+
+---
+
+### Entry 8: Production Containerization, Docker Compose & Deployment Hardening
+* **Date**: 2026-11-11
+* **Topic**: Multi-Stage Dockerfiles, Non-Root Runtime, Safe Secret Enforcement, and Monorepo Integration
+* **Status**: Implemented in local working tree (unstaged per task constraints)
+
+#### What was asked:
+Create production-grade Dockerfiles for backend and frontend, configure a root `docker-compose.yml` with PostgreSQL 16, Redis 7, Backend, and Frontend (Nginx), enforce non-root runtime security, run Prisma migrations on startup, require production secrets, and synchronize workspace dependencies.
+
+#### What the tool produced:
+1. Initially configured insecure fallback passwords in `docker-compose.yml` (e.g. `POSTGRES_PASSWORD:-ledgerline_password`, default JWT secrets).
+2. Suggested subfolder build contexts (`context: ./backend`) that broke monorepo package-lock resolution.
+3. Used `npx prisma migrate deploy` in the runtime entrypoint instead of local binaries.
+4. Mapped redundant port `5173:80` alongside `80:80` on the frontend container.
+5. Inconsistent branding and administrator emails (`admin@balancevault.local` vs `admin@ledgerline.local`).
+
+#### What was wrong with it:
+1. **Insecure Production Defaults**: Fallback passwords allow containers to spin up in production environments with well-known default secrets, opening the system to credential stuffing and token forgery.
+2. **Monorepo Build Failure**: Isolated build contexts cannot access root `package.json` and `package-lock.json`, breaking `npm ci --workspace=backend`.
+3. **Remote CLI Lookups**: Using `npx` in production images can trigger remote registry checks and fails in air-gapped or restricted network environments.
+4. **Port Confusion**: Port 5173 is the Vite development server port; mapping Nginx port 80 to 5173 creates unnecessary port exposure and user confusion.
+5. **Branding Inconsistency**: Discrepancies between documentation and code violate the Snovasys hiring challenge requirements.
+
+#### What was done instead:
+1. Hardened `docker-compose.yml` with Compose variable interpolation assertions (`${VARIABLE:?error_message}`), causing Docker Compose to safely refuse startup if `POSTGRES_PASSWORD`, `JWT_SECRET`, `COOKIE_SECRET`, `CSRF_SECRET`, or `ADMIN_BOOTSTRAP_SECRET` are missing.
+2. Changed build contexts to the repository root (`context: .`), utilizing root `package-lock.json` and `npm ci --workspace` across both services.
+3. Installed Prisma CLI into production dependencies and invoked `./node_modules/.bin/prisma migrate deploy` directly in `docker-entrypoint.sh`.
+4. Dedicated non-root user `ledgerline` (`UID 1001`) with explicit home directory created, running under `dumb-init` for POSIX signal propagation and graceful shutdown.
+5. Removed port 5173 from Compose, binding frontend exclusively to port `80:80`.
+6. Harmonized all branding, seeds, and default admin identities to `admin@ledgerline.local` across all backend and frontend files.

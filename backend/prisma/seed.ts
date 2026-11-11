@@ -27,7 +27,7 @@ async function main() {
   // 2. Create System Admin
   const admin = await prisma.user.create({
     data: {
-      email: 'demo-admin@balancevault.local',
+      email: 'demo-admin@ledgerline.local',
       fullName: 'Synthetic Demo Admin',
       passwordHash: SYNTHETIC_HASH,
       role: Role.ADMIN,
@@ -38,7 +38,7 @@ async function main() {
   // 3. Create Compliance Operator
   const operator = await prisma.user.create({
     data: {
-      email: 'demo-operator@balancevault.local',
+      email: 'demo-operator@ledgerline.local',
       fullName: 'Synthetic Demo Operator',
       passwordHash: SYNTHETIC_HASH,
       role: Role.OPERATOR,
@@ -49,7 +49,7 @@ async function main() {
   // 4. Create Two Customer Users
   const customer1 = await prisma.user.create({
     data: {
-      email: 'demo-customer1@balancevault.local',
+      email: 'demo-customer1@ledgerline.local',
       fullName: 'Alice Demo (Synthetic)',
       passwordHash: SYNTHETIC_HASH,
       role: Role.CUSTOMER,
@@ -59,7 +59,7 @@ async function main() {
 
   const customer2 = await prisma.user.create({
     data: {
-      email: 'demo-customer2@balancevault.local',
+      email: 'demo-customer2@ledgerline.local',
       fullName: 'Bob Demo (Synthetic)',
       passwordHash: SYNTHETIC_HASH,
       role: Role.CUSTOMER,

@@ -39,7 +39,7 @@ describe('Phase 4 - Admin Bootstrap & Customer Onboarding Tests', () => {
       // 4. Create Admin
       const newAdmin: MockUser = {
         id: `admin-${Date.now()}`,
-        email: params.email || 'admin@balancevault.local',
+        email: params.email || 'admin@ledgerline.local',
         role: Role.ADMIN,
         status: UserStatus.ACTIVE,
       };

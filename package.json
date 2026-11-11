@@ -19,7 +19,8 @@
     "db:generate": "npm --workspace=backend run db:generate",
     "db:migrate": "npm --workspace=backend run db:migrate",
     "db:seed": "npm --workspace=backend run db:seed",
-    "admin:bootstrap": "npm --workspace=backend run admin:bootstrap"
+    "admin:bootstrap": "npm --workspace=backend run admin:bootstrap",
+    "admin:bootstrap:dev": "npm --workspace=backend run admin:bootstrap:dev"
   },
   "keywords": [
     "fintech",

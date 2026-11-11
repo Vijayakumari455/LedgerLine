@@ -127,7 +127,7 @@ export const RegisterPage: FC = () => {
           Create Customer Account
         </h2>
         <p className="mt-1 text-center text-sm text-slate-400">
-          Open a new double-entry verified account on BalanceVault
+          Open a new double-entry verified account on LedgerLine
         </p>
       </div>
 

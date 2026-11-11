@@ -48,7 +48,7 @@ export const createApp = (): Application => {
     res.status(200).json({
       status: 'UP',
       timestamp: new Date().toISOString(),
-      service: 'BalanceVault Backend API',
+      service: 'LedgerLine Backend API',
     });
   });
 

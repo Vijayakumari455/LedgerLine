@@ -50,7 +50,7 @@ export const LoginPage: FC = () => {
           </div>
         </div>
         <h2 className="mt-4 text-center text-2xl font-extrabold tracking-tight text-white">
-          BalanceVault
+          LedgerLine
         </h2>
         <p className="mt-1 text-center text-sm text-slate-400">
           Cryptographically Verified Multi-Currency Financial Ledger
@@ -131,19 +131,19 @@ export const LoginPage: FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => fillDemo('admin@balancevault.internal', 'Admin@Secure2026!')}
+                onClick={() => fillDemo('admin@ledgerline.local', 'Admin@Secure2026!')}
                 className="text-left px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 transition-colors"
               >
                 <span className="font-semibold text-emerald-400 block">Admin</span>
-                admin@balancevault.internal
+                admin@ledgerline.local
               </button>
               <button
                 type="button"
-                onClick={() => fillDemo('customer@balancevault.internal', 'Customer@Secure2026!')}
+                onClick={() => fillDemo('customer@ledgerline.local', 'Customer@Secure2026!')}
                 className="text-left px-2.5 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 transition-colors"
               >
                 <span className="font-semibold text-teal-400 block">Customer</span>
-                customer@balancevault.internal
+                customer@ledgerline.local
               </button>
             </div>
           </div>
