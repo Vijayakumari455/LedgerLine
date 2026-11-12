@@ -1,4 +1,6 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application, Request, Response, NextFunction } from 'express';
+import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -90,7 +92,21 @@ export const createApp = (): Application => {
   app.use('/api/transfers', transferRouter);
   app.use('/api/audit', auditRouter);
 
-  // 7. 404 Catch-All Handler
+  // 7. Production Static Frontend Serving (Unified Cloud Deployment)
+  const rootDist = path.resolve(process.cwd(), 'frontend/dist');
+  const relativeDist = path.resolve(__dirname, '../../frontend/dist');
+  const frontendDistPath = fs.existsSync(rootDist) ? rootDist : relativeDist;
+  if (fs.existsSync(frontendDistPath)) {
+    app.use(express.static(frontendDistPath));
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith('/api')) {
+        return next();
+      }
+      res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+  }
+
+  // 8. 404 Catch-All Handler (for unmatched API routes)
   app.use((_req: Request, res: Response) => {
     res.status(404).json({
       error: 'NOT_FOUND',
@@ -98,7 +114,7 @@ export const createApp = (): Application => {
     });
   });
 
-  // 8. Centralized Security Error Handler
+  // 9. Centralized Security Error Handler
   app.use(errorHandler);
 
   return app;

@@ -1,0 +1,50 @@
+# ==============================================================================
+# Render Blueprint Configuration (render.yaml)
+# Single-Click Deployment for LedgerLine (Backend API + Frontend SPA + PostgreSQL 16)
+# ==============================================================================
+
+databases:
+  # ----------------------------------------------------------------------------
+  # 1. Managed PostgreSQL 16 Database
+  # ----------------------------------------------------------------------------
+  - name: ledgerline-db
+    databaseName: ledgerline
+    user: ledgerline
+    plan: free
+    region: oregon
+    postgresMajorVersion: "16"
+
+services:
+  # ----------------------------------------------------------------------------
+  # 2. Unified LedgerLine Full-Stack Web Service
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: ledgerline
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm --workspace=backend run db:migrate:deploy && (npm run admin:bootstrap || true) && npm --workspace=backend run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ledgerline-db
+          property: connectionString
+      - key: REQUIRE_REDIS_IN_PRODUCTION
+        value: "false"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: CSRF_SECRET
+        generateValue: true
+      - key: ADMIN_BOOTSTRAP_SECRET
+        generateValue: true
+      - key: ADMIN_BOOTSTRAP_EMAIL
+        value: admin@ledgerline.local
+      - key: ADMIN_BOOTSTRAP_PASSWORD
+        generateValue: true
+
